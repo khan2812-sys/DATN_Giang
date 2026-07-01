@@ -485,7 +485,6 @@ static u32 fs_calc_data_start(const u8 *sec, u32 vbr_sector, fs_type_t type)
         reserved = get_unaligned_le16(&sec[14]);
         num_fats = sec[16];
         fat_sz32 = get_unaligned_le32(&sec[36]);
-		sec_per_clus = get_unaligned_le32(&sec[13]);
  
         return vbr_sector + reserved + (num_fats * fat_sz32);
  
