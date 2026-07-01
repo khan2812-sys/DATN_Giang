@@ -243,7 +243,6 @@ static struct usb_gadget_strings *fsg_strings_array[] = {
  *   fs_partition_start    — sector đầu tiên của partition (0 nếu không có MBR)
  *   fs_type               — loại filesystem đã phát hiện (enum bên dưới)
  *
- * Thay toàn bộ fat32_data_start_sector → fs_data_start_sector trong do_read/do_write.
  * ========================================================================== */
  
 typedef enum {
@@ -428,7 +427,7 @@ static int is_fat32_vbr(const u8 *sec)
  *   - Offset 3–10: chuỗi "EXFAT   " (8 byte, có khoảng trắng)
  *   - Offset 11–63: toàn bộ MustBeZero (= 0)
  *   - Boot signature 0xAA55 tại offset 510
- *   - ClusterHeapOffset tại offset 88 (u32 LE)  — vùng Data bắt đầu tại đây
+ *   - ClusterHeapOffset tại offset 88 (u32 LE)  — Allocation Bitmap bắt đầu tại đây
  * -------------------------------------------------------------------------- */
 static int is_exfat_vbr(const u8 *sec)
 {
