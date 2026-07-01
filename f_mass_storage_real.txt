@@ -1039,40 +1039,25 @@ static int sleep_thread(struct fsg_common *common, bool can_freeze,
 
 
 // Thay đổi kiểu trả về thành int để báo cáo trạng thái cho tầng trên
-static int aes_dma_stream(struct device *dev,
-
-                          void          *buf_addr,
-
-                          size_t         len,
-
-                          int            is_encrypt)
+static int aes_dma_stream(struct device *dev, void *buf_addr, size_t len, int is_encrypt)
 
 {
 
-    void      *src_buf = NULL;
+    void *src_buf = NULL;
 
-    void      *dst_buf = NULL;
+    void *dst_buf = NULL;
 
     dma_addr_t src_phys, dst_phys;
 
-    u32        ctrl, status;
+    u32 ctrl, status;
 
-    int        timeout, ret = 0;
-
- 
-
-    /* ------------------------------------------------------------------ */
-
-    /* Kiểm tra đầu vào                                                    */
-
-    /* ------------------------------------------------------------------ */
+    int timeout, ret = 0;
 
     if (!aes_regs || !dma_regs) {
 
         pr_err("[AES_DMA] Hardware chua duoc khoi tao\n");
 
         return -ENODEV;
-
     }
 
     if (!buf_addr || !dev || len == 0)
@@ -1087,26 +1072,6 @@ static int aes_dma_stream(struct device *dev,
 
     }
 
- 
-
-    /* ------------------------------------------------------------------ */
-
-    /* Bước 1: Cấp phát hai coherent buffer TÁCH BIỆT                     */
-
-    /*                                                                     */
-
-    /* KHÔNG dùng cùng địa chỉ cho src và dst. Khi in-place (src==dst),   */
-
-    /* AXI DMA MM2S và S2MM chạy đồng thời trên cùng vùng DDR, DDR        */
-
-    /* controller có thể reorder transaction → S2MM ghi đè plaintext mà   */
-
-    /* MM2S chưa kịp đọc → một số block AES nhận ciphertext làm input     */
-
-    /* → file binary (PDF/JPEG/PNG) hỏng hoàn toàn vì magic bytes sai.   */
-
-    /* ------------------------------------------------------------------ */
-
     src_buf = dma_alloc_coherent(dev, len, &src_phys, GFP_KERNEL);
 
     if (!src_buf) {
@@ -1116,8 +1081,6 @@ static int aes_dma_stream(struct device *dev,
         return -ENOMEM;
 
     }
-
- 
 
     dst_buf = dma_alloc_coherent(dev, len, &dst_phys, GFP_KERNEL);
 
@@ -1131,49 +1094,17 @@ static int aes_dma_stream(struct device *dev,
 
     }
 
- 
-
     memcpy(src_buf, buf_addr, len);   /* plaintext/ciphertext vào src */
 
     memset(dst_buf, 0, len);          /* dst sạch để AES ghi kết quả  */
 
- 
-
-    /* ------------------------------------------------------------------ */
-
-    /* Bước 2: Đổi chiều AES nếu cần + pulse init để re-expand key       */
-
-    /*                                                                     */
-
-    /* Key đã nạp sẵn từ init_aes_hardware(). Chỉ cần thay encdec và     */
-
-    /* pulse init để core tính lại key schedule cho chiều mới.            */
-
-    /*   0x06 = keylen=1, encdec=1, init=0  →  encrypt mode              */
-
-    /*   0x04 = keylen=1, encdec=0, init=0  →  decrypt mode              */
-
-    /* ------------------------------------------------------------------ */
-
     ctrl = is_encrypt ? 0x06 : 0x04;
 
- 
-
     iowrite32(ctrl,        aes_regs + 0x00);   /* set mode, init=0 */
-
-
-
-    /* ------------------------------------------------------------------ */
-
-    /* Bước 3: Reset cả hai DMA channel                                   */
-
-    /* ------------------------------------------------------------------ */
 
     iowrite32(0x04, dma_regs + 0x00);   /* MM2S soft reset */
 
     iowrite32(0x04, dma_regs + 0x30);   /* S2MM soft reset */
-
- 
 
     timeout = 2000;
 
@@ -1193,53 +1124,19 @@ static int aes_dma_stream(struct device *dev,
 
     }
 
- 
-
-    /* ------------------------------------------------------------------ */
-
-    /* Bước 4: Run/Start cả hai channel                                   */
-
-    /* ------------------------------------------------------------------ */
-
     iowrite32(0x01, dma_regs + 0x00);   /* MM2S RS=1 */
 
     iowrite32(0x01, dma_regs + 0x30);   /* S2MM RS=1 */
 
     udelay(5);
 
- 
-
-    /* ------------------------------------------------------------------ */
-
-    /* Bước 5: Nạp địa chỉ — src và dst KHÁC NHAU                        */
-
-    /*   MM2S Source Address: src_phys  (DMA ĐỌC từ đây → AES stream in) */
-
-    /*   S2MM Dest Address:   dst_phys  (DMA GHI vào đây ← AES stream out)*/
-
-    /* ------------------------------------------------------------------ */
-
     iowrite32(lower_32_bits(src_phys), dma_regs + 0x18);
 
     iowrite32(upper_32_bits(src_phys), dma_regs + 0x1C);
 
- 
-
     iowrite32(lower_32_bits(dst_phys), dma_regs + 0x48);
 
     iowrite32(upper_32_bits(dst_phys), dma_regs + 0x4C);
-
- 
-
-    /* ------------------------------------------------------------------ */
-
-    /* Bước 6: Kick off — ghi LENGTH = bắt đầu transfer ngay              */
-
-    /*   MM2S trước (bắt đầu đọc data gửi vào AES stream)                */
-
-    /*   Delay nhỏ để MM2S kịp start trước khi S2MM mở cửa nhận          */
-
-    /* ------------------------------------------------------------------ */
 
     iowrite32((u32)len, dma_regs + 0x28);   /* MM2S Length */
 
