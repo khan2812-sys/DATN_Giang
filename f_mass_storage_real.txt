@@ -1100,7 +1100,7 @@ static int aes_dma_stream(struct device *dev, void *buf_addr, size_t len, int is
 
     ctrl = is_encrypt ? 0x06 : 0x04;
 
-    iowrite32(ctrl,        aes_regs + 0x00);   /* set mode, init=0 */
+    iowrite32(ctrl, aes_regs + 0x00);   /* set mode, init=0 */
 
     iowrite32(0x04, dma_regs + 0x00);   /* MM2S soft reset */
 
@@ -1143,20 +1143,6 @@ static int aes_dma_stream(struct device *dev, void *buf_addr, size_t len, int is
     udelay(1);
 
     iowrite32((u32)len, dma_regs + 0x58);   /* S2MM Length */
-
- 
-
-    /* ------------------------------------------------------------------ */
-
-    /* Bước 7: Poll S2MM đến Idle                                         */
-
-    /*   Bit[1] = Idle  → transfer hoàn tất bình thường                  */
-
-    /*   Bit[6] = Err_Irq → lỗi AXI bus (KHÔNG nhầm với bit[4][5]        */
-
-    /*            là IOC_Irq/Dly_Irq — đó là interrupt bình thường)       */
-
-    /* ------------------------------------------------------------------ */
 
     timeout = 1000000;   /* ~1 giây tại udelay(1) */
 
@@ -1201,15 +1187,6 @@ static int aes_dma_stream(struct device *dev, void *buf_addr, size_t len, int is
         goto out_free;
 
     }
-
- 
-
-    /* ------------------------------------------------------------------ */
-
-    /* Bước 8: Chờ MM2S cũng Idle (xác nhận đã đọc hết src)              */
-
-    /* ------------------------------------------------------------------ */
-
     timeout = 100000;
 
     while (!(ioread32(dma_regs + 0x04) & 0x02) && timeout-- > 0)
@@ -1220,17 +1197,7 @@ static int aes_dma_stream(struct device *dev, void *buf_addr, size_t len, int is
 
         pr_warn("[AES_DMA] MM2S chua Idle sau khi S2MM xong\n");
 
- 
-
-    /* ------------------------------------------------------------------ */
-
-    /* Bước 9: Copy kết quả từ dst_buf về buffer gốc                      */
-
-    /* ------------------------------------------------------------------ */
-
     memcpy(buf_addr, dst_buf, len);
-
- 
 
 out_free:
 
