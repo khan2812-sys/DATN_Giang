@@ -380,7 +380,7 @@ static int is_fat32_vbr(const u8 *sec)
 {
     u16 bytes_per_sec, reserved, root_ent_cnt;
     u8  num_fats, sec_per_clus;
-    u32 fat_size, total_sec32;
+    u32 fat_size, total_sec32, data_sector, count_of_cluster;
  
     if (sec[510] != 0x55 || sec[511] != 0xAA)
         return 0;
@@ -415,6 +415,13 @@ static int is_fat32_vbr(const u8 *sec)
     total_sec32  = get_unaligned_le32(&sec[32]);
     if (total_sec32 == 0)
         return 0;
+
+	data_sector = total_sec32 - reserved - (fat_size*num_fats);
+	count_of_cluster = data_sector/sec_per_clus;
+
+	if (count_of_cluster < 65525) {
+		return 0;
+	}
  
     return 1;
 }
