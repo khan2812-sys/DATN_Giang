@@ -1138,11 +1138,7 @@ static int aes_dma_stream(struct device *dev, void *buf_addr, size_t len, int is
 
     iowrite32(lower_32_bits(src_phys), dma_regs + 0x18);
 
-    iowrite32(upper_32_bits(src_phys), dma_regs + 0x1C);
-
     iowrite32(lower_32_bits(dst_phys), dma_regs + 0x48);
-
-    iowrite32(upper_32_bits(dst_phys), dma_regs + 0x4C);
 
     iowrite32((u32)len, dma_regs + 0x28);   /* MM2S Length */
 
