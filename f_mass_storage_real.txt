@@ -1146,6 +1146,8 @@ static int aes_dma_stream(struct device *dev, void *buf_addr, size_t len, int is
 
     iowrite32((u32)len, dma_regs + 0x58);   /* S2MM Length */
 
+	cpu_relax();
+
     timeout = 1000000;   /* ~1 giây tại udelay(1) */
 
     while (timeout-- > 0) {
